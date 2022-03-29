@@ -120,6 +120,61 @@ def training(generator, discriminator, loss, g_optimizer, d_optimizer, train_dat
     return (generator, discriminator), (g_losses, d_losses) 
 
 
+def do_training(dataset, ex_image):
+    lr = 2e-5               
+    batch_size = 32        
+    update_interval = 100  
+    n_epochs = 2            
+    noise_samples = 128    
+
+    loss_function = nn.BCELoss()
+
+    G_model = Generator(noise_samples, (4,72,72))
+    D_model = Discriminator((4,72,72))
+    G_optimizer = torch.optim.Adam(G_model.parameters(), lr=lr)       
+    D_optimizer = torch.optim.Adam(D_model.parameters(), lr=lr)      
+
+    train_dataset = dataset
+
+    models, losses = training(G_model, D_model, loss_function, G_optimizer, D_optimizer, train_dataset, n_epochs, update_interval, noise_samples)
+
+    G_model, D_model = models
+    g_losses, d_losses = losses
+
+    plt.plot(np.arange(len(g_losses)) * batch_size * update_interval, g_losses)
+    plt.title("training curve for generator")
+    plt.xlabel("number of images trained on")
+    plt.ylabel("loss")
+    plt.show()
+
+    plt.plot(np.arange(len(d_losses)) * batch_size * update_interval, d_losses)
+    plt.title("training curve for discriminator")
+    plt.xlabel("number of images trained on")
+    plt.ylabel("loss")
+    plt.show()
+
+    trained_output = D_model(ex_image.float())
+
+    plot_image(ex_image)
+    print("Output of the discriminator given this input:", trained_output[0].detach().numpy()[0])
+    plt.show()
+
+    noise = (torch.rand(1, G_model.input_size) - 0.5) / 0.5
+    # noise = (torch.rand(1, 128) - 0.5) / 0.5
+
+    trained_gen = G_model(noise)
+
+    plot_image(trained_gen.detach())
+
+    trained_output = D_model(trained_gen.float())
+
+    print("Output of the discriminator given this generated input:", trained_output[0].detach().numpy()[0])
+
+    noise = (torch.rand(1, 128) - 0.5) / 0.5
+    trained_output = G_model(noise)
+
+    plot_image(trained_output.detach()) 
+
 # batch size = 32 
 # batch size controls how many images are placed into a 'batch' -> NP.array
 # This function takes all the emojis and loads them into NP array 
@@ -149,13 +204,30 @@ def plot_image(image):
     plt.show()
     return
 
+# def do(ex_image):
+#     rained_output = D_model(ex_image.float())
+
+#     plot_image(ex_image)
+#     print("Output of the discriminator given this input:", trained_output[0].detach().numpy()[0])
+#     plt.show()
+
+#     noise = (torch.rand(1, G_model.input_size) - 0.5) / 0.5
+#     # noise = (torch.rand(1, 128) - 0.5) / 0.5
+
+#     trained_gen = G_model(noise)
+
+#     plot_image(trained_gen.detach())
+
+#     trained_output = D_model(trained_gen.float())
+
+#     print("Output of the discriminator given this generated input:", trained_output[0].detach().numpy()[0])
 
 
 def main():
-    dataset = load_emoji(batch_size=32)
+    dataset = load_emoji(batch_size=4)
     dataset = torch.from_numpy(dataset)
-    ex_image = dataset[random.randint(0,20)]
-
+    ex_image = dataset[random.randint(0,138)]
+    do_training(dataset,ex_image)
     # print("image shape:", ex_image.shape)
     # plot_image(ex_image)
 
