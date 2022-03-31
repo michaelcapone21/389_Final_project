@@ -185,7 +185,6 @@ def load_emoji(batch_size):
     for dir in tqdm(os.listdir('./datasets')):
         for file in tqdm(os.listdir('./datasets/'+dir)):
             img = Image.open( './datasets/'+dir+'/'+ file)
-            # img.convert("RGBA").save('./datasets/'+dir+'/'+ file) #run this once if you are getting shape errors
             img = np.asarray(img).reshape(4, 72,72)
             if batch_counter < batch_size:
                 batch.append(img)
@@ -243,11 +242,6 @@ def main():
     # noise = (torch.rand(1, 128) - 0.5) / 0.5
     # test_output = test_gen(noise)
     # plot_image(test_output.detach().byte())
-
-
-
-
-
 
 
 if __name__ == "__main__":
