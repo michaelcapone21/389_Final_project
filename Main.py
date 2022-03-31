@@ -16,7 +16,7 @@ import random
 from tqdm import tqdm
 from PIL import Image
 
-
+image_size = (4,28,28)
 
 class Discriminator(nn.Module):
 
@@ -26,7 +26,7 @@ class Discriminator(nn.Module):
         self.conv1 = nn.Conv2d(4,6,(10,10))
         self.conv2 = nn.Conv2d(6,10,(5,5))
 
-        self.lin1 = nn.Linear(34810,200)
+        self.lin1 = nn.Linear(2250,200)
         self.lin2 = nn.Linear(200,1)
 
         self.relu = nn.ReLU()
@@ -55,7 +55,9 @@ class Generator(nn.Module):
         self.input_size = input_size
 
         self.lin1 = nn.Linear(input_size,200)
-        self.lin2 = nn.Linear(200,np.prod(output_shape))
+        self.lin2 = nn.Linear(200,1000)
+        self.lin3 = nn.Linear(1000,np.prod(output_shape))
+
         self.relu = nn.ReLU()
 
 
@@ -64,8 +66,12 @@ class Generator(nn.Module):
         out = self.lin1(x)
         out = self.relu(out)
         out = self.lin2(out)
+        out = self.relu(out)
+        out = self.lin3(out)
 
-        out = torch.reshape(out,(-1,4,72,72))
+
+
+        out = torch.reshape(out,(-1,4,28,28))
 
         return nn.Sigmoid()(out)
 
@@ -121,16 +127,16 @@ def training(generator, discriminator, loss, g_optimizer, d_optimizer, train_dat
 
 
 def do_training(dataset, ex_image):
-    lr = 2e-5               
+    lr = 2e-4              
     batch_size = 32        
     update_interval = 100  
-    n_epochs = 2            
+    n_epochs = 8
     noise_samples = 128    
 
     loss_function = nn.BCELoss()
 
-    G_model = Generator(noise_samples, (4,72,72))
-    D_model = Discriminator((4,72,72))
+    G_model = Generator(noise_samples, image_size)
+    D_model = Discriminator(image_size)
     G_optimizer = torch.optim.Adam(G_model.parameters(), lr=lr)       
     D_optimizer = torch.optim.Adam(D_model.parameters(), lr=lr)      
 
@@ -185,7 +191,7 @@ def load_emoji(batch_size):
     for dir in tqdm(os.listdir('./datasets')):
         for file in tqdm(os.listdir('./datasets/'+dir)):
             img = Image.open( './datasets/'+dir+'/'+ file)
-            img = np.asarray(img).reshape(4, 72,72)
+            img = np.asarray(img).reshape(image_size)
             if batch_counter < batch_size:
                 batch.append(img)
                 batch_counter += 1
@@ -198,7 +204,7 @@ def load_emoji(batch_size):
 
 # plot the image only || important for visualization 
 def plot_image(image): 
-    image = image.reshape(-1, 72,72,4)
+    image = image.reshape(-1,28,28,4)
     plt.imshow(image[0])
     plt.show()
     return
@@ -230,8 +236,8 @@ def main():
     # print("image shape:", ex_image.shape)
     # plot_image(ex_image)
 
-    discriminator = Discriminator((4,72,72))
-    ex_output = discriminator(ex_image.float())
+    # discriminator = Discriminator((4,28,28))
+    # ex_output = discriminator(ex_image.float())
 
     # plot_image(ex_image)
     # this is just for testing discriminator
