@@ -115,7 +115,7 @@ def training(generator, discriminator, loss, g_optimizer, d_optimizer, train_dat
             fake_labels = torch.zeros(image.shape[0], 1)
 
             g_optimizer.zero_grad()
-            g_loss = -loss(fake_classifications,fake_labels)
+            g_loss = loss(fake_classifications,fake_labels)
             g_loss.backward()
             g_optimizer.step()
 
