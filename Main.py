@@ -1,11 +1,13 @@
 import time
+from tkinter.tix import InputOnly
+from turtle import xcor
 import torch
 import torch.nn as nn
 import torchvision
 import numpy as np
+import tensorflow as tf
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, random_split, Subset
-from torchvision import datasets
 from torchvision.datasets import ImageFolder
 import torchvision.transforms as tt
 from torchvision.utils import make_grid
@@ -22,27 +24,48 @@ class Discriminator(nn.Module):
 
     def __init__(self, input_shape):
         super(Discriminator, self).__init__()
+        # print(input_shape)
+        # self.conv1 = nn.Conv2d(input_shape[1] * 8,6,(10,10))
+        # self.conv2 = nn.Conv2d(6,10,(5,5))
 
-        self.conv1 = nn.Conv2d(4,6,(10,10))
-        self.conv2 = nn.Conv2d(6,10,(5,5))
+        # self.lin1 = nn.Linear(2250,200)
+        # self.lin2 = nn.Linear(200,1)
 
-        self.lin1 = nn.Linear(2250,200)
-        self.lin2 = nn.Linear(200,1)
 
+        # self.conv2d1 = nn.ConvTranspose2d(4, 12 , 4, 2, bias=False)
+
+        # self.conv2d2 = nn.ConvTranspose2d(12, 16, 4, 2, 1, bias=False)
+
+        # self.conv2d5 = nn.ConvTranspose2d(16, 1, 4, 1,0, bias=False)
+
+
+        self.conv1 = nn.Conv2d(4,input_shape[1] , 4, 2, bias=False)
+        # self.batchNorm1 = nn.BatchNorm2d(image_size[1] )
+
+        self.conv2 = nn.Conv2d(input_shape[1],image_size[1]*2, 3, 2, 1, bias=False)
+        # self.batchNorm2 = nn.BatchNorm2d(image_size[1] * 2)
+
+        self.conv3 = nn.Conv2d(image_size[1]*2,image_size[1]*4, 3,2,1, bias=False)
+        # self.batchNorm3 = nn.BatchNorm2d(image_size[1] * 4)
+
+        self.conv4 = nn.Conv2d(image_size[1]*4, 1, 2,2,1, bias=False)
+        # self.batchNorm4 = nn.BatchNorm2d(image_size[1] *8)
+
+        # self.conv5 = nn.Conv2d(image_size[1] * 8, 1, 4,1,0, bias=False)
+        self.lin = nn.Linear(9, 1)
         self.relu = nn.ReLU()
         self.flatten = nn.Flatten()
 
     def forward(self, x):
-        out = self.conv1(x)
-        out = self.relu(out)
-        out = self.conv2(out)
-        out = self.relu(out)
+
+        out = self.relu(((self.conv1(x))))
+        out = self.relu((self.conv2(out)))
+        out = self.relu((self.conv3(out)))
+        out = ((self.conv4(out))) 
+        # out = self.relu((self.conv5(out))) 
 
         out = self.flatten(out)
-
-        out = self.lin1(out)
-        out = self.relu(out)
-        out = self.lin2(out)
+        out = self.lin(out)
 
         x = nn.Sigmoid()(out)
 
@@ -54,24 +77,52 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.input_size = input_size
 
-        self.lin1 = nn.Linear(input_size,200)
-        self.lin2 = nn.Linear(200,1000)
-        self.lin3 = nn.Linear(1000,np.prod(output_shape))
+
+        # self.conv2dT1 = nn.ConvTranspose2d(4, 16, 4, 1 ,0, bias=False)
+
+
+        # self.conv2dT2 = nn.ConvTranspose2d(16,12, 4, 2, 1, bias=False)
+
+        # self.conv2dT5 = nn.ConvTranspose2d(12, 4, 4,2,1, bias=False)
+        # print('input size')
+        # print(input_size)
+
+        self.conv2dT1 = nn.ConvTranspose2d(input_size,image_size[0] *8, 4, 1 ,0,bias=False)
+        # self.batchNorm1 = nn.BatchNorm2d(image_size[1] * 8)
+
+        self.conv2dT2 = nn.ConvTranspose2d(image_size[0]*8,image_size[0]*4, 3, 2, 1, bias=False)
+        # self.batchNorm2 = nn.BatchNorm2d(image_size[1] * 4)
+
+        self.conv2dT3 = nn.ConvTranspose2d(image_size[0]*4,image_size[0]*2, 3,2,1, bias=False)
+        # self.batchNorm3 = nn.BatchNorm2d(image_size[1] * 2)
+
+        self.conv2dT4 = nn.ConvTranspose2d(image_size[0]*2,4, 4,2,0, bias=False)
+        # self.batchNorm4 = nn.BatchNorm2d(image_size[1])
+
+        # self.conv2dT5 = nn.ConvTranspose2d(image_size[0], 4, 4,2,1, bias=False)
+        # self.flatten = nn.Flatten()
+        # self.lin = nn.Linear(576,3136)
 
         self.relu = nn.ReLU()
 
 
     def forward(self, x):
-
-        out = self.lin1(x)
-        out = self.relu(out)
-        out = self.lin2(out)
-        out = self.relu(out)
-        out = self.lin3(out)
-
+        # print(tf.shape(x))
+        # out = torch.reshape(x,(-1,4,28,28))
+    
+        # print(tf.shape(out))
+        out = self.relu((self.conv2dT1(x)))
 
 
+        out = self.relu((self.conv2dT2(out)))
+        out = self.relu((self.conv2dT3(out)))
+        # print(np.shape(out))
+        out = self.relu((self.conv2dT4(out))) 
+        # out = self.flatten(out)
+        # out = self.lin(out)
+        # print(np.shape(out))
         out = torch.reshape(out,(-1,4,28,28))
+
 
         return nn.Sigmoid()(out)
 
@@ -84,18 +135,22 @@ def training(generator, discriminator, loss, g_optimizer, d_optimizer, train_dat
         for i, image in enumerate(tqdm(train_dataloader)):
 
             image = image.float()
-
+            # print((image.shape[0]))
             real_classifications = discriminator(image)
             real_labels = torch.ones(image.shape[0])
 
-
-
-            noise = torch.from_numpy((np.random.randn(image.shape[0], noise_samples) - 0.5) / 0.5).float()  ## This is us sampling gaussian noise
+            noise = torch.from_numpy((np.random.randn(4,noise_samples,1,1) - 0.5) / 0.5).float()  ## This is us sampling gaussian noise
+            # print(np.shape(noise))
             fake_inputs = generator(noise)
             fake_classifications = discriminator(fake_inputs)
+            # print(np.shape(fake_inputs))
             fake_labels = torch.zeros(image.shape[0])
+            # print(len(real_classifications))
+            # print(len(fake_classifications))
+            # print(np.shape(real_classifications))
+            # print(np.shape(fake_classifications))
 
-            classifications = torch.cat((real_classifications, fake_classifications), 0).reshape(len(real_classifications) + len(fake_classifications))
+            classifications = torch.cat((real_classifications, fake_classifications), 0).reshape((len(real_classifications) + len(fake_classifications)))
             targets = torch.cat((real_labels, fake_labels), 0)
 
 
@@ -109,7 +164,7 @@ def training(generator, discriminator, loss, g_optimizer, d_optimizer, train_dat
                 d_losses.append(round(d_loss.item(), 2))
             
 
-            noise = torch.from_numpy((np.random.randn(image.shape[0], noise_samples) - 0.5) / 0.5).float()
+            noise = torch.from_numpy((np.random.randn(image.shape[0], noise_samples,1,1) - 0.5) / 0.5).float()
             fake_inputs = generator(noise)
             fake_classifications = discriminator(fake_inputs)
             fake_labels = torch.zeros(image.shape[0], 1)
@@ -127,11 +182,12 @@ def training(generator, discriminator, loss, g_optimizer, d_optimizer, train_dat
 
 
 def do_training(dataset, ex_image):
-    lr = 2e-4              
-    batch_size = 32        
+    # print('in training')
+    lr = 2e-3              
+    batch_size = 256        
     update_interval = 100  
-    n_epochs = 8
-    noise_samples = 128    
+    n_epochs = 50
+    noise_samples = 100    
 
     loss_function = nn.BCELoss()
 
@@ -165,7 +221,7 @@ def do_training(dataset, ex_image):
     print("Output of the discriminator given this input:", trained_output[0].detach().numpy()[0])
     plt.show()
 
-    noise = (torch.rand(1, G_model.input_size) - 0.5) / 0.5
+    noise = (torch.rand(1, G_model.input_size,1,1) - 0.5) / 0.5
     # noise = (torch.rand(1, 128) - 0.5) / 0.5
 
     trained_gen = G_model(noise)
@@ -176,7 +232,9 @@ def do_training(dataset, ex_image):
 
     print("Output of the discriminator given this generated input:", trained_output[0].detach().numpy()[0])
 
-    noise = (torch.rand(1, 128) - 0.5) / 0.5
+    # noise = (torch.rand(4, 128,1,1) - 0.5) / 0.5
+    noise = (torch.rand(1, G_model.input_size,1,1) - 0.5) / 0.5
+
     trained_output = G_model(noise)
 
     plot_image(trained_output.detach()) 
@@ -210,7 +268,7 @@ def plot_image(image):
     return
 
 # def do(ex_image):
-#     rained_output = D_model(ex_image.float())
+#     trained_output = D_model(ex_image.float())
 
 #     plot_image(ex_image)
 #     print("Output of the discriminator given this input:", trained_output[0].detach().numpy()[0])
@@ -231,7 +289,7 @@ def plot_image(image):
 def main():
     dataset = load_emoji(batch_size=4)
     dataset = torch.from_numpy(dataset)
-    ex_image = dataset[random.randint(0,138)]
+    ex_image = dataset[random.randint(0,137)]
     do_training(dataset,ex_image)
     # print("image shape:", ex_image.shape)
     # plot_image(ex_image)
@@ -245,7 +303,7 @@ def main():
 
     # this is for testing generator 
     # test_gen = Generator(128, (4, 72, 72))
-    # noise = (torch.rand(1, 128) - 0.5) / 0.5
+    # noise = (torch.rand(1, 128,1,1) - 0.5) / 0.5
     # test_output = test_gen(noise)
     # plot_image(test_output.detach().byte())
 
