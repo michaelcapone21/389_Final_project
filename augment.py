@@ -27,11 +27,27 @@ def merge():
             if(out != None):
                 out.save('./datasets/Augmented/'+dir+'_blur_'+file)
                 
+def mergeAll():
+     for dir in (os.listdir('./datasets')):
+        if dir == 'Augmented':
+            continue
+        for file in((os.listdir('./datasets/'+dir))):
+            out = Image.open( './datasets/'+dir+'/'+ file)
+            for file in tqdm((os.listdir('./datasets/'+dir))):
+                img = Image.open( './datasets/'+dir+'/'+ file)
+                if(img != out):
+                    out = Image.blend(img,out, .5)
+                out.save('./datasets/Augmented/'+dir+'_blur_all_'+file)
+                # out.show()
+
+
+                
             
 
 def main():
     # rotate()
     # merge()
+    mergeAll()
     print('l')
 if __name__ == "__main__":
     main()
