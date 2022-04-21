@@ -1,6 +1,6 @@
 import time
-from tkinter.tix import InputOnly
-from turtle import xcor
+# from tkinter.tix import InputOnly
+# from turtle import xcor
 import torch
 import torch.nn as nn
 import torchvision
@@ -61,7 +61,7 @@ class Discriminator(nn.Module):
         out = self.relu(((self.conv1(x))))
         out = self.relu((self.conv2(out)))
         out = self.relu((self.conv3(out)))
-        out = ((self.conv4(out))) 
+        out = self.relu((self.conv4(out))) 
         # out = self.relu((self.conv5(out))) 
 
         out = self.flatten(out)
@@ -76,16 +76,6 @@ class Generator(nn.Module):
     def __init__(self, input_size, output_shape):
         super(Generator, self).__init__()
         self.input_size = input_size
-
-
-        # self.conv2dT1 = nn.ConvTranspose2d(4, 16, 4, 1 ,0, bias=False)
-
-
-        # self.conv2dT2 = nn.ConvTranspose2d(16,12, 4, 2, 1, bias=False)
-
-        # self.conv2dT5 = nn.ConvTranspose2d(12, 4, 4,2,1, bias=False)
-        # print('input size')
-        # print(input_size)
 
         self.conv2dT1 = nn.ConvTranspose2d(input_size,image_size[0] *8, 4, 1 ,0,bias=False)
         # self.batchNorm1 = nn.BatchNorm2d(image_size[1] * 8)
@@ -170,7 +160,7 @@ def training(generator, discriminator, loss, g_optimizer, d_optimizer, train_dat
             fake_labels = torch.zeros(image.shape[0], 1)
 
             g_optimizer.zero_grad()
-            g_loss = loss(fake_classifications,fake_labels)
+            g_loss = -loss(fake_classifications,fake_labels)
             g_loss.backward()
             g_optimizer.step()
 
@@ -183,18 +173,19 @@ def training(generator, discriminator, loss, g_optimizer, d_optimizer, train_dat
 
 def do_training(dataset, ex_image):
     # print('in training')
-    lr = 2e-3              
+    lr_g = .0001             
+    lr_d = .00006
     batch_size = 256        
-    update_interval = 100  
-    n_epochs = 50
-    noise_samples = 100    
+    update_interval = 64  
+    n_epochs = 400
+    noise_samples = 128    
 
     loss_function = nn.BCELoss()
 
     G_model = Generator(noise_samples, image_size)
     D_model = Discriminator(image_size)
-    G_optimizer = torch.optim.Adam(G_model.parameters(), lr=lr)       
-    D_optimizer = torch.optim.Adam(D_model.parameters(), lr=lr)      
+    G_optimizer = torch.optim.Adam(G_model.parameters(), lr=lr_g)       
+    D_optimizer = torch.optim.Adam(D_model.parameters(), lr=lr_d)      
 
     train_dataset = dataset
 
@@ -221,8 +212,7 @@ def do_training(dataset, ex_image):
     print("Output of the discriminator given this input:", trained_output[0].detach().numpy()[0])
     plt.show()
 
-    noise = (torch.rand(1, G_model.input_size,1,1) - 0.5) / 0.5
-    # noise = (torch.rand(1, 128) - 0.5) / 0.5
+    noise = (torch.rand(4, G_model.input_size,1,1) - 0.5) / 0.5
 
     trained_gen = G_model(noise)
 
@@ -232,8 +222,7 @@ def do_training(dataset, ex_image):
 
     print("Output of the discriminator given this generated input:", trained_output[0].detach().numpy()[0])
 
-    # noise = (torch.rand(4, 128,1,1) - 0.5) / 0.5
-    noise = (torch.rand(1, G_model.input_size,1,1) - 0.5) / 0.5
+    noise = (torch.rand(4, G_model.input_size,1,1) - 0.5) / 0.5
 
     trained_output = G_model(noise)
 
@@ -246,9 +235,10 @@ def load_emoji(batch_size):
     dataset = []
     batch_counter = 0
     batch = []
-    for dir in tqdm(os.listdir('./datasets')):
-        for file in tqdm(os.listdir('./datasets/'+dir)):
-            img = Image.open( './datasets/'+dir+'/'+ file)
+    for dir in tqdm(os.listdir('./Datasets')):
+
+        for file in tqdm(os.listdir('./Datasets/'+dir)):
+            img = Image.open( './Datasets/'+dir+'/'+ file)
             img = np.asarray(img).reshape(image_size)
             if batch_counter < batch_size:
                 batch.append(img)
@@ -267,45 +257,14 @@ def plot_image(image):
     plt.show()
     return
 
-# def do(ex_image):
-#     trained_output = D_model(ex_image.float())
-
-#     plot_image(ex_image)
-#     print("Output of the discriminator given this input:", trained_output[0].detach().numpy()[0])
-#     plt.show()
-
-#     noise = (torch.rand(1, G_model.input_size) - 0.5) / 0.5
-#     # noise = (torch.rand(1, 128) - 0.5) / 0.5
-
-#     trained_gen = G_model(noise)
-
-#     plot_image(trained_gen.detach())
-
-#     trained_output = D_model(trained_gen.float())
-
-#     print("Output of the discriminator given this generated input:", trained_output[0].detach().numpy()[0])
 
 
 def main():
     dataset = load_emoji(batch_size=4)
     dataset = torch.from_numpy(dataset)
-    ex_image = dataset[random.randint(0,137)]
+    ex_image = dataset[random.randint(0,276)]
     do_training(dataset,ex_image)
-    # print("image shape:", ex_image.shape)
-    # plot_image(ex_image)
 
-    # discriminator = Discriminator((4,28,28))
-    # ex_output = discriminator(ex_image.float())
-
-    # plot_image(ex_image)
-    # this is just for testing discriminator
-    # print("Output of the discriminator given this input:", ex_output[0].detach().numpy()[0])  
-
-    # this is for testing generator 
-    # test_gen = Generator(128, (4, 72, 72))
-    # noise = (torch.rand(1, 128,1,1) - 0.5) / 0.5
-    # test_output = test_gen(noise)
-    # plot_image(test_output.detach().byte())
 
 
 if __name__ == "__main__":
