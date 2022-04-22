@@ -24,32 +24,17 @@ class Discriminator(nn.Module):
 
     def __init__(self, input_shape):
         super(Discriminator, self).__init__()
-        # print(input_shape)
-        # self.conv1 = nn.Conv2d(input_shape[1] * 8,6,(10,10))
-        # self.conv2 = nn.Conv2d(6,10,(5,5))
-
-        # self.lin1 = nn.Linear(2250,200)
-        # self.lin2 = nn.Linear(200,1)
-
-
-        # self.conv2d1 = nn.ConvTranspose2d(4, 12 , 4, 2, bias=False)
-
-        # self.conv2d2 = nn.ConvTranspose2d(12, 16, 4, 2, 1, bias=False)
-
-        # self.conv2d5 = nn.ConvTranspose2d(16, 1, 4, 1,0, bias=False)
-
-
         self.conv1 = nn.Conv2d(4,input_shape[1] , 4, 2, bias=False)
-        # self.batchNorm1 = nn.BatchNorm2d(image_size[1] )
+        self.batchNorm1 = nn.BatchNorm2d(image_size[1] )
 
         self.conv2 = nn.Conv2d(input_shape[1],image_size[1]*2, 3, 2, 1, bias=False)
-        # self.batchNorm2 = nn.BatchNorm2d(image_size[1] * 2)
+        self.batchNorm2 = nn.BatchNorm2d(image_size[1] * 2)
 
         self.conv3 = nn.Conv2d(image_size[1]*2,image_size[1]*4, 3,2,1, bias=False)
-        # self.batchNorm3 = nn.BatchNorm2d(image_size[1] * 4)
+        self.batchNorm3 = nn.BatchNorm2d(image_size[1] * 4)
 
-        self.conv4 = nn.Conv2d(image_size[1]*4, 1, 2,2,1, bias=False)
-        # self.batchNorm4 = nn.BatchNorm2d(image_size[1] *8)
+        self.conv4 = nn.Conv2d(image_size[1]*4, 1, 2,2,1)
+        # self.batchNorm4 = nn.BatchNorm2d(image_size[1] *)
 
         # self.conv5 = nn.Conv2d(image_size[1] * 8, 1, 4,1,0, bias=False)
         self.lin = nn.Linear(9, 1)
@@ -58,9 +43,9 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
 
-        out = self.relu(((self.conv1(x))))
-        out = self.relu((self.conv2(out)))
-        out = self.relu((self.conv3(out)))
+        out = self.relu(self.batchNorm1((self.conv1(x))))
+        out = self.relu(self.batchNorm2(self.conv2(out)))
+        out = self.relu(self.batchNorm3(self.conv3(out)))
         out = self.relu((self.conv4(out))) 
         # out = self.relu((self.conv5(out))) 
 
@@ -77,40 +62,28 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.input_size = input_size
 
-        self.conv2dT1 = nn.ConvTranspose2d(input_size,image_size[0] *8, 4, 1 ,0,bias=False)
-        # self.batchNorm1 = nn.BatchNorm2d(image_size[1] * 8)
+        self.conv2dT1 = nn.ConvTranspose2d(input_size,image_size[1] *8, 4, 1 ,0,bias=False)
+        self.batchNorm1 = nn.BatchNorm2d(image_size[1] * 8)
 
-        self.conv2dT2 = nn.ConvTranspose2d(image_size[0]*8,image_size[0]*4, 3, 2, 1, bias=False)
-        # self.batchNorm2 = nn.BatchNorm2d(image_size[1] * 4)
+        self.conv2dT2 = nn.ConvTranspose2d(image_size[1]*8,image_size[1]*4, 3, 2, 1, bias=False)
+        self.batchNorm2 = nn.BatchNorm2d(image_size[1] * 4)
 
-        self.conv2dT3 = nn.ConvTranspose2d(image_size[0]*4,image_size[0]*2, 3,2,1, bias=False)
-        # self.batchNorm3 = nn.BatchNorm2d(image_size[1] * 2)
+        self.conv2dT3 = nn.ConvTranspose2d(image_size[1]*4,image_size[1]*2, 3,2,1, bias=False)
+        self.batchNorm3 = nn.BatchNorm2d(image_size[1] * 2)
 
-        self.conv2dT4 = nn.ConvTranspose2d(image_size[0]*2,4, 4,2,0, bias=False)
-        # self.batchNorm4 = nn.BatchNorm2d(image_size[1])
+        self.conv2dT4 = nn.ConvTranspose2d(image_size[1]*2,4, 4,2,0, bias=False)
 
-        # self.conv2dT5 = nn.ConvTranspose2d(image_size[0], 4, 4,2,1, bias=False)
-        # self.flatten = nn.Flatten()
-        # self.lin = nn.Linear(576,3136)
 
         self.relu = nn.ReLU()
 
 
     def forward(self, x):
-        # print(tf.shape(x))
-        # out = torch.reshape(x,(-1,4,28,28))
-    
-        # print(tf.shape(out))
-        out = self.relu((self.conv2dT1(x)))
-
-
-        out = self.relu((self.conv2dT2(out)))
-        out = self.relu((self.conv2dT3(out)))
-        # print(np.shape(out))
+        out = self.relu(self.batchNorm1(self.conv2dT1(x)))
+        out = self.relu(self.batchNorm2(self.conv2dT2(out)))
+        out = self.relu(self.batchNorm3(self.conv2dT3(out)))
         out = self.relu((self.conv2dT4(out))) 
-        # out = self.flatten(out)
-        # out = self.lin(out)
-        # print(np.shape(out))
+
+
         out = torch.reshape(out,(-1,4,28,28))
 
 
@@ -176,9 +149,9 @@ def do_training(dataset, ex_image):
     lr_g = .0001             
     lr_d = .00006
     batch_size = 256        
-    update_interval = 64  
-    n_epochs = 400
-    noise_samples = 128    
+    update_interval = 128  
+    n_epochs = 4 
+    noise_samples = 256    
 
     loss_function = nn.BCELoss()
 
@@ -222,11 +195,11 @@ def do_training(dataset, ex_image):
 
     print("Output of the discriminator given this generated input:", trained_output[0].detach().numpy()[0])
 
-    noise = (torch.rand(4, G_model.input_size,1,1) - 0.5) / 0.5
+    # noise = (torch.rand(4, G_model.input_size,1,1) - 0.5) / 0.5
 
-    trained_output = G_model(noise)
+    # trained_output = G_model(noise)
 
-    plot_image(trained_output.detach()) 
+    # plot_image(trained_output.detach()) 
 
 # batch size = 32 
 # batch size controls how many images are placed into a 'batch' -> NP.array
@@ -264,6 +237,8 @@ def main():
     dataset = torch.from_numpy(dataset)
     ex_image = dataset[random.randint(0,276)]
     do_training(dataset,ex_image)
+    print('l')
+
 
 
 
